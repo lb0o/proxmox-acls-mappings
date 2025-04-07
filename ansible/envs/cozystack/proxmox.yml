@@ -1,0 +1,26 @@
+---
+# integrater a dynamic inventory for proxmox
+plugin: community.general.proxmox
+cache: true
+validate_certs: false
+fail_on_errors: true
+strict: true
+private: true
+
+# This will be required to get the ansible host and use in consul
+want_proxmox_nodes_ansible_host: false
+
+# Additional parameters that might be useful:
+want_facts: true  # Gather facts of each guest
+want_agent_info: true  # If qemu agent is running, gather info such as IPs
+
+# Custom handling to fetch and print IP addresses:
+want_ip_addresses: true
+keyed_groups:
+  - key: proxmox_tags_parsed
+    separator: ""
+compose:
+  # the ip adresses ipv4 ['ip-addresses'][0] and ipv6 on ['ip-addresses'][1]
+  # "{{ proxmox_agent_interfaces[1]['ip-addresses'][0].split('/')[0] }}"
+  ansible_host: >-
+    "{{ proxmox_agent_interfaces[1]['ip-addresses'][0].split('/')[0] }}"

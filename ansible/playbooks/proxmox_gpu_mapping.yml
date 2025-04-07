@@ -1,0 +1,14 @@
+---
+# Playbook for mapping GPUs in Proxmox using cozystack credentials
+- name: Map GPUs in Proxmox
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars_files:
+    - ../envs/cozystack/cozystack-resources.yml
+    - ../envs/cozystack/cozystack-resources.secrets.yml
+    - ../envs/.host_vars/.secretspve.yml
+  
+  roles:
+    - ../roles/mapping_gpu

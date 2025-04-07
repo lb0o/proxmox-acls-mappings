@@ -1,0 +1,53 @@
+---
+# tasks file for GPU mapping
+- name: Load secrets cozystack
+  include_vars:
+    file: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.secrets.yml"
+    name: vault_data_cozystack
+  no_log: true
+
+- name: Load secrets pve
+  include_vars:
+    file: "{{ playbook_dir }}/../envs/.host_vars/.secretspve.yml"
+    name: vault_data_pve
+  no_log: true
+
+- name: load cozystack resources
+  include_vars:
+    file: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.yml"
+    name: cozystack_resources
+  no_log: true
+
+- name: Install required Python packages
+  ansible.builtin.pip:
+    name:
+      - requests
+      - urllib3
+    state: present
+  become: true
+
+- name: Get cozystack-mapping-gpu token
+  ansible.builtin.set_fact:
+    proxmox_mapping_gpu_token: "{{ vault_data_cozystack.tokens['cozystack-mapping-gpu'] }}"
+  no_log: true
+
+- name: Debug proxmox_mapping_gpu_token
+  ansible.builtin.debug:
+    msg: "Proxmox mapping GPU token: {{ proxmox_mapping_gpu_token }}"
+
+- name: Run GPU mapping script
+  ansible.builtin.command: >
+    python3 {{ role_path }}/files/gpu_mapper.py
+  environment:
+    PROXMOX_API_URL: "{{ cozystack_resources.endpoint }}"
+    PROXMOX_TOKEN_ID: "cozystack@pve!cozystack-mapping-gpu"
+    PROXMOX_TOKEN_VALUE: "{{ proxmox_mapping_gpu_token }}"
+    PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"
+  register: gpu_mapping_result
+  changed_when: gpu_mapping_result.rc == 0
+  failed_when: gpu_mapping_result.rc != 0
+
+- name: Show GPU mapping results
+  ansible.builtin.debug:
+    var: gpu_mapping_result.stdout_lines
+  when: gpu_mapping_result.stdout_lines is defined
