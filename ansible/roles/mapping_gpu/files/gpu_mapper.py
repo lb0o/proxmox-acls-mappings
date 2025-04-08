@@ -200,23 +200,20 @@ class ProxmoxGPUMapper:
                 print("No GPUs found in the cluster.")
                 return
 
-            primary_mapping_devices: List[GPUDevice] = []
-            secondary_mapping_devices: List[GPUDevice] = []
-
             for node, gpus in gpus_per_node.items():
-                if len(gpus) >= 1:
-                    primary_gpu = gpus[0]
-                    primary_mapping_devices.append(primary_gpu)
-                    print(f"Assigned GPU index 0 of node {node} to primary mapping")
-                if len(gpus) >= 2:
-                    secondary_gpu = gpus[1]
-                    secondary_mapping_devices.append(secondary_gpu)
-                    print(f"Assigned GPU index 1 of node {node} to secondary mapping")
-
-            if primary_mapping_devices:
-                self.create_gpu_mapping("cozystack-gpu-primary", primary_mapping_devices)
-            if secondary_mapping_devices:
-                self.create_gpu_mapping("cozystack-gpu-secondary", secondary_mapping_devices)
+                for gpu in gpus:
+                    cardname = f"{gpu.description}"
+                    cardname = (
+                        cardname.replace("[", "")
+                        .replace("]", "")
+                        .replace(" ", "_")
+                        .replace(":", "_")
+                        .replace("-", "_")
+                        .lower()
+                    )
+                    mapping_id = f"gpu-{gpu.vendor_id[2:]}{gpu.device_id[2:]}-{cardname}-{gpu.index + 1}"
+                    print(f"Creating mapping for GPU: {mapping_id}")
+                    self.create_gpu_mapping(mapping_id, [gpu])
 
         except Exception as e:
             print(f"Error during GPU scanning and mapping: {e}")
