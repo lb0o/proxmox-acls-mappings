@@ -29,7 +29,7 @@ ansible-vault edit
 ansible-vault view 
 ```
 
-# USAGE
+# usage
 
 ```bash
 ansible-playbook ansible/playbooks/proxmox_acl_setup.yml --vault-password-file ~/.yourvaultmasterpasswordfile
