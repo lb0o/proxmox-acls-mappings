@@ -39,6 +39,12 @@ ansible-playbook ansible/playbooks/proxmox_acl_setup.yml --vault-password-file ~
 ansible-playbook ansible/playbooks/proxmox_gpu_mapping.yml --vault-password-file ~/.yourvaultmasterpasswordfile
 ```
 
+you can erase any created resources by running the playbook with the `-e` option:
+```bash
+ansible-playbook ansible/playbooks/proxmox_acl_setup.yml --vault-password-file ~/.yourvaultmasterpasswordfile -e "reset=true" 
+```
+
+
 License
 ----
 Apache 2.0

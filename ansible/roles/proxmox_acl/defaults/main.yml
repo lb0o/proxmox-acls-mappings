@@ -1,0 +1,26 @@
+---
+# Default variables for proxmox_acl role
+reset: false
+
+# Resource configuration
+resource_id: "{{ ansible_date_time.year }}{{ ansible_date_time.month }}{{ ansible_date_time.day }}"
+user_id: "cozystack-{{ resource_id }}"
+user_real_id: "{{ user_id }}@pve"
+pool_id: "cozystack-pool"
+token_id: "{{ user_id }}"
+
+# Role definitions
+roles:
+  - id: "cozystack-admin"
+    privs: "Datastore.Allocate,Datastore.AllocateSpace,VM.Allocate,VM.Audit,VM.Config.*,VM.PowerMgmt,VM.Migrate,VM.Monitor,VM.Snapshot,VM.Clone,Mapping.*"
+  - id: "cozystack-readonly"
+    privs: "VM.Audit,VM.Monitor,Datastore.Audit,Mapping.Audit"
+  - id: "cozystack-provisioner"
+    privs: "Datastore.Allocate,VM.Allocate,VM.Config.*,VM.Migrate,VM.PowerMgmt,VM.Snapshot"
+
+# File paths
+secrets_file: "{{ playbook_dir }}/../envs/.host_vars/.secretspve.yml"
+output_dir: "{{ playbook_dir }}/../envs/cozystack"
+
+# Proxmox API settings
+proxmox_validate_certs: false

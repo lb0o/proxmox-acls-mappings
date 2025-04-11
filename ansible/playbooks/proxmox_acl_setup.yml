@@ -10,7 +10,6 @@
   roles:
     - role: ../roles/proxmox_acl
       vars:
-        reset: false # Set to true to reset/clear ACLs
         secrets_file: "{{ playbook_dir }}/../envs/.host_vars/.secretspve.yml"
         output_dir: "{{ playbook_dir }}/../envs/cozystack"
         proxmox_validate_certs: false
@@ -21,7 +20,7 @@
           - "cozystack-provisioner"
           - "cozystack-mapping-gpu"
         resource_id: "{{ lookup('pipe', 'date +%Y%m%d') }}"
-        roles:
+        acl_roles:
           - id: "cozystack-admin"
             privs: "Datastore.Allocate,Datastore.AllocateSpace,VM.Allocate,VM.Audit,VM.Config.CDROM,VM.Config.CPU,VM.Config.Cloudinit,VM.Config.Disk,VM.Config.HWType,VM.Config.Memory,VM.Config.Network,VM.Config.Options,VM.PowerMgmt,VM.Migrate,VM.Monitor,VM.Snapshot,VM.Clone,Mapping.Audit,Mapping.Modify,Mapping.Use,Sys.Audit,Sys.Modify"
           - id: "cozystack-readonly"

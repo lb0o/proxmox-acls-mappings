@@ -63,9 +63,9 @@
       roleid: "{{ item.id }}"
       privs: "{{ item.privs }}"
     validate_certs: "{{ proxmox_validate_certs }}"
-  loop: "{{ roles }}"
+  loop: "{{ acl_roles }}"
   when: item.id not in proxmox_existing.results[0].json.data | map(attribute='roleid') | list and
-        reset == false
+        not reset
 
 - name: Create pool if not exists
   uri:
@@ -80,7 +80,7 @@
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
   when: pool_id not in proxmox_existing.results[1].json.data | map(attribute='poolid') | list and
-        reset == false
+        not reset
 
 - name: Delete pool if reset is true
   uri:
@@ -91,7 +91,7 @@
       CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500] # Allow conflict (pool not found)
-  when: reset == true
+  when: reset
 
 - name: Create group
   uri:
@@ -106,7 +106,7 @@
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500]  # Allow conflict (already exists)
-  when: reset == false
+  when: not reset
 
 - name: Delete group if reset is true
   uri:
@@ -117,7 +117,7 @@
       CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500] # Allow conflict (group not found)
-  when: reset == true
+  when: reset
 
 - name: Ensure user exists
   uri:
@@ -136,7 +136,7 @@
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500]  # Allow conflict (already exists)
-  when: reset == false
+  when: not reset
 
 - name: Create multiple API tokens
   uri:
@@ -153,7 +153,7 @@
     status_code: [200, 400]  # Allow conflict (already exists)
   loop: "{{ token_ids }}"
   register: tokens_created
-  when: reset == false
+  when: not reset
 
 - name: Set ACL permissions for tokens
   uri:
@@ -170,7 +170,7 @@
       propagate: 1
     validate_certs: "{{ proxmox_validate_certs }}"
   loop: "{{ token_ids }}"
-  when: reset == false
+  when: not reset
 
 - name: Set ACL permissions for user
   uri:
@@ -186,7 +186,7 @@
       roles: "cozystack-mapping-gpu"
       propagate: 1
     validate_certs: "{{ proxmox_validate_certs }}"
-  when: reset == false
+  when: not reset
   loop: 
     - "/"
     - "/mapping/pci"
@@ -206,7 +206,7 @@
       propagate: 1
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500]  # Allow conflict (already exists)
-  when: reset == false
+  when: not reset
   loop: 
     - "cozystack-provisioner"
     - "cozystack-mapping-gpu"
@@ -222,7 +222,7 @@
     validate_certs: "{{ proxmox_validate_certs }}"
     status_code: [200, 500]  # Allow conflict (not found)
   loop: "{{ token_ids }}"
-  when: reset == true
+  when: reset
 
 - name: Save non-sensitive resource info
   copy:
@@ -247,11 +247,11 @@
       {% endfor %}
     dest: "{{ output_dir }}/cozystack-resources.secrets.yml"
     mode: '0600'
-  when: reset == false
+  when: not reset
 
 - name: Encrypt sensitive data file
   command: ansible-vault encrypt "{{ output_dir }}/cozystack-resources.secrets.yml" --vault-password-file ~/.vaultpasspve
-  when: reset == false
+  when: not reset
 
 - name: Output summary
   debug:
