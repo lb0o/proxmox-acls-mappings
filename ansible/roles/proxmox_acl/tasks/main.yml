@@ -190,6 +190,26 @@
     - "/"
     - "/mapping/pci"
 
+- name: Set ACL permissions for pool
+  uri:
+    url: "{{ endpoint }}/access/acl"
+    method: PUT
+    headers:
+      Cookie: "PVEAuthCookie={{ auth.json.data.ticket }}"
+      CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
+    body_format: form-urlencoded
+    body:
+      path: "/pool/{{ pool_id }}"
+      groups: "cozystack"
+      roles: "{{ item }}"
+      propagate: 1
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500]  # Allow conflict (already exists)
+  when: reset == false
+  loop: 
+    - "cozystack-provisioner"
+    - "cozystack-mapping-gpu"
+
 - name: Delete ACL
   uri:
     url: "{{ endpoint }}/access/roles/{{ item }}"
