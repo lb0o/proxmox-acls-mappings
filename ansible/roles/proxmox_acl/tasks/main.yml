@@ -153,6 +153,7 @@
     status_code: [200, 400]  # Allow conflict (already exists)
   loop: "{{ token_ids }}"
   register: tokens_created
+  when: reset == false
 
 - name: Set ACL permissions for tokens
   uri:
