@@ -5,17 +5,29 @@ cozystack-proxmox - Ansible playbook for setting up Proxmox VE access control
 - Generate an encrypted resource file with user credentials and permissions
 - Allow to auto-map the GPU resources to the VMs to allow GPU passthrough easily
 
-# secrets
-<!-- Create a password with -->
-## Generate the token and store in user's home directory
- head -c48 /dev/urandom | base64 > ~/.yourvaultmasterpasswordfile
+# Secrets
 
-## Copy the example file
- cp ansible/envs/.host_vars/.thepvesecrets.yml.example ansible/envs/.host_vars/.thepvesecrets.yml
+Create a secure password and store it somewhere safe:
+```bash
+head -c48 /dev/urandom | base64 > ~/.yourvaultmasterpasswordfile
+```
+Copy the example secrets file to the appropriate location:
+```bash
+cp ansible/envs/.host_vars/.thepvesecrets.yml.example ansible/envs/.host_vars/.thepvesecrets.yml
+```
 
-## Edit the file with ansible-vault (encrypt prior to editing)
- ansible-vault encrypt --vault-password-file ~/.yourvaultmasterpasswordfile ansible/envs/.host_vars/.thepvesecrets.yml
- ansible-vault edit --vault-password-file ~/.yourvaultmasterpasswordfile ansible/envs/.host_vars/.thepvesecrets.yml
+Encrypt the secrets file before editing:
+```bash
+ansible-vault encrypt --vault-password-file ~/.yourvaultmasterpasswordfile ansible/envs/.host_vars/.thepvesecrets.yml
+```
+
+Usefull ansible-vault commands:
+```bash
+ansible-vault encrypt
+ansible-vault decrypt
+ansible-vault edit
+ansible-vault view 
+```
 
 # USAGE
 
