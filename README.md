@@ -1,14 +1,11 @@
-# cozystack-proxmox(1) -- Proxmox ACL Setup for Cozystack
-
-## NAME
+# Proxmox ACL Setup for Cozystack
 
 cozystack-proxmox - Ansible playbook for setting up Proxmox VE access control
 - Create ACLs, users, roles, and API tokens for Cozystack integration
 - Generate an encrypted resource file with user credentials and permissions
 - Allow to auto-map the GPU resources to the VMs to allow GPU passthrough easily
 
-# SECRETS
-
+# secrets
 <!-- Create a password with -->
 ## Generate the token and store in user's home directory
  head -c48 /dev/urandom | base64 > ~/.yourvaultmasterpasswordfile
@@ -22,7 +19,6 @@ cozystack-proxmox - Ansible playbook for setting up Proxmox VE access control
 
 # USAGE
 
-
 ```bash
 ansible-playbook ansible/playbooks/proxmox_acl_setup.yml --vault-password-file ~/.yourvaultmasterpasswordfile
 ```
@@ -31,3 +27,6 @@ ansible-playbook ansible/playbooks/proxmox_acl_setup.yml --vault-password-file ~
 ansible-playbook ansible/playbooks/proxmox_gpu_mapping.yml --vault-password-file ~/.yourvaultmasterpasswordfile
 ```
 
+License
+----
+Apache 2.0
