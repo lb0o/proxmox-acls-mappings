@@ -1,14 +1,61 @@
 ---
-# Playbook for mapping GPUs in Proxmox using cozystack credentials
-- name: Map GPUs in Proxmox
-  hosts: localhost
-  connection: local
-  gather_facts: true
-  
-  vars_files:
-    - ../envs/cozystack/cozystack-resources.yml
-    - ../envs/cozystack/cozystack-resources.secrets.yml
-    - ../envs/.host_vars/.secretspve.yml
-  
+# Playbook: Proxmox GPU Mapping
+# Description: Maps GPUs in Proxmox environment using cozystack credentials
+# Author: lb0o
+# Last Updated: 2025
+
+- name: Map GPUs in Proxmox Environment
+  hosts: proxmox
+  gather_facts: true  
+
+  pre_tasks:
+    - name: Check if cozystack resources exist
+      stat:
+        path: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.yml"
+      register: cozystack_resources
+
+    - name: Check if secrets file exists
+      stat:
+        path: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.secrets.yml"
+      register: cozystack_secrets
+
+    - name: Check if host vars secrets exist
+      stat:
+        path: "{{ playbook_dir }}/../envs/.host_vars/.secretspve.yml"
+      register: host_vars_secrets
+
+    - name: Ensure required variables are loaded
+      debug:
+        msg: "Loading configuration files for GPU mapping"
+      when: ansible_check_mode == false
+
+    - name: Prompt to run ACL setup if resources don't exist
+      fail:
+        msg: "Cozystack resources not found. Please run the ACL setup role first using:
+         ansible-playbook ansible/playbooks/proxmox_acl_setup.yml -i ansible/envs/.host_vars/inventory.ini --vault-password-file ~/.vaultpasspve"
+      when: not cozystack_resources.stat.exists
+
+    - name: Include vars files if they exist
+      include_vars:
+        file: "{{ item }}"
+      loop:
+        - "../envs/cozystack/cozystack-resources.yml"
+        - "../envs/cozystack/cozystack-resources.secrets.yml"
+        - "../envs/.host_vars/.secretspve.yml"
+      when: 
+        - cozystack_resources.stat.exists
+        - cozystack_secrets.stat.exists
+        - host_vars_secrets.stat.exists
+
   roles:
-    - ../roles/mapping_gpu
+    - name: ../roles/mapping_gpu
+      tags: 
+        - gpu
+        - mapping
+        - proxmox
+
+  post_tasks:
+    - name: Verify GPU mapping completion
+      debug:
+        msg: "GPU mapping process completed for endpoint {{ proxmox.endpoint }}"
+      when: ansible_check_mode == false

@@ -5,6 +5,13 @@
     file: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.secrets.yml"
     name: vault_data_cozystack
   no_log: true
+  ignore_errors: yes
+
+- name: Set default cozystack token
+  ansible.builtin.set_fact:
+    vault_data_cozystack: "{{ vault_data_cozystack | default({'tokens': {'cozystack-mapping-gpu': 'default-token'}}) }}"
+  when: vault_data_cozystack is not defined
+  no_log: true
 
 - name: Load secrets pve
   include_vars:
@@ -12,11 +19,15 @@
     name: vault_data_pve
   no_log: true
 
-- name: load cozystack resources
+- name: Load cozystack resources
   include_vars:
     file: "{{ playbook_dir }}/../envs/cozystack/cozystack-resources.yml"
-    name: cozystack_resources
   no_log: true
+
+- name: Debug cozystack_resources
+  ansible.builtin.debug:
+    var: cozystack_resources
+    verbosity: 2
 
 - name: Install required Python packages
   ansible.builtin.pip:
@@ -39,7 +50,7 @@
   ansible.builtin.command: >
     python3 {{ role_path }}/files/gpu_mapper.py
   environment:
-    PROXMOX_API_URL: "{{ cozystack_resources.endpoint }}"
+    PROXMOX_API_URL: "{{ endpoint }}"
     PROXMOX_TOKEN_ID: "cozystack@pve!cozystack-mapping-gpu"
     PROXMOX_TOKEN_VALUE: "{{ proxmox_mapping_gpu_token }}"
     PROXMOX_VERIFY_SSL: "{{ proxmox_verify_ssl | default('false') }}"

@@ -3,7 +3,6 @@
 - name: Generate random password for cozystack user
   shell: head -c48 /dev/urandom | base64
   register: cozystack_password
-  changed_when: false
 
 - name: Load secrets
   include_vars:
@@ -65,7 +64,8 @@
       privs: "{{ item.privs }}"
     validate_certs: "{{ proxmox_validate_certs }}"
   loop: "{{ roles }}"
-  when: item.id not in proxmox_existing.results[0].json.data | map(attribute='roleid') | list
+  when: item.id not in proxmox_existing.results[0].json.data | map(attribute='roleid') | list and
+        reset == false
 
 - name: Create pool if not exists
   uri:
@@ -79,9 +79,47 @@
       poolid: "{{ pool_id }}"
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
-  when: pool_id not in proxmox_existing.results[1].json.data | map(attribute='poolid') | list
+  when: pool_id not in proxmox_existing.results[1].json.data | map(attribute='poolid') | list and
+        reset == false
 
-- name: Ensure user exists (idempotent creation)
+- name: Delete pool if reset is true
+  uri:
+    url: "{{ endpoint }}/pools/{{ pool_id }}"
+    method: DELETE
+    headers:
+      Cookie: "PVEAuthCookie={{ auth.json.data.ticket }}"
+      CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500] # Allow conflict (pool not found)
+  when: reset == true
+
+- name: Create group
+  uri:
+    url: "{{ endpoint }}/access/groups"
+    method: POST
+    headers:
+      Cookie: "PVEAuthCookie={{ auth.json.data.ticket }}"
+      CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
+    body_format: form-urlencoded
+    body:
+      groupid: "cozystack"
+      comment: "Created by automation on {{ resource_id }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500]  # Allow conflict (already exists)
+  when: reset == false
+
+- name: Delete group if reset is true
+  uri:
+    url: "{{ endpoint }}/access/groups/cozystack"
+    method: DELETE
+    headers:
+      Cookie: "PVEAuthCookie={{ auth.json.data.ticket }}"
+      CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500] # Allow conflict (group not found)
+  when: reset == true
+
+- name: Ensure user exists
   uri:
     url: "{{ endpoint }}/access/users"
     method: POST
@@ -91,12 +129,14 @@
     body_format: form-urlencoded
     body:
       userid: "{{ user_real_id }}"
+      groups: "cozystack"
       password: "{{ cozystack_password.stdout }}"
       email: "{{ vault_data.proxmox.user_email }}"
       enable: 1
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
-    status_code: [200, 409]  # Allow conflict (already exists)
+    status_code: [200, 500]  # Allow conflict (already exists)
+  when: reset == false
 
 - name: Create multiple API tokens
   uri:
@@ -110,6 +150,7 @@
       privsep: 1
       comment: "Created by automation on {{ resource_id }}"
     validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 400]  # Allow conflict (already exists)
   loop: "{{ token_ids }}"
   register: tokens_created
 
@@ -128,6 +169,7 @@
       propagate: 1
     validate_certs: "{{ proxmox_validate_certs }}"
   loop: "{{ token_ids }}"
+  when: reset == false
 
 - name: Set ACL permissions for user
   uri:
@@ -143,9 +185,23 @@
       roles: "cozystack-mapping-gpu"
       propagate: 1
     validate_certs: "{{ proxmox_validate_certs }}"
+  when: reset == false
   loop: 
     - "/"
     - "/mapping/pci"
+
+- name: Delete ACL
+  uri:
+    url: "{{ endpoint }}/access/roles/{{ item }}"
+    method: DELETE
+    headers:
+      Cookie: "PVEAuthCookie={{ auth.json.data.ticket }}"
+      CSRFPreventionToken: "{{ auth.json.data.CSRFPreventionToken }}"
+    body_format: form-urlencoded
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500]  # Allow conflict (not found)
+  loop: "{{ token_ids }}"
+  when: reset == true
 
 - name: Save non-sensitive resource info
   copy:
@@ -158,6 +214,7 @@
       tokens: {{ token_ids | map('regex_replace', '^(.*)$', user_real_id ~ '!\1') | list }}
     dest: "{{ output_dir }}/cozystack-resources.yml"
     mode: '0644'
+    
 
 - name: Save sensitive data to encrypted file
   copy:
@@ -169,13 +226,16 @@
       {% endfor %}
     dest: "{{ output_dir }}/cozystack-resources.secrets.yml"
     mode: '0600'
+  when: reset == false
 
 - name: Encrypt sensitive data file
   command: ansible-vault encrypt "{{ output_dir }}/cozystack-resources.secrets.yml" --vault-password-file ~/.vaultpasspve
+  when: reset == false
 
 - name: Output summary
   debug:
     msg:
+      reset: "{{ reset }}"
       resource_id: "{{ resource_id }}"
       user: "{{ user_real_id }}"
       pool: "{{ pool_id }}"
